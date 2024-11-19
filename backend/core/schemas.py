@@ -1,15 +1,15 @@
 from datetime import datetime
 from typing import Optional
 from ninja import Schema
-from pydantic import EmailStr, Field
+from pydantic import EmailStr, Field, BaseModel
 
 class TokenSchema(Schema):
     access_token: str
     token_type: str = "bearer"
 
-class TokenPayload(Schema):
-    sub: Optional[int] = None
-    exp: Optional[datetime] = None
+class TokenPayload(BaseModel):
+    exp: int
+    sub: str
 
 class UserCreate(Schema):
     email: EmailStr
@@ -20,10 +20,12 @@ class UserCreate(Schema):
 class UserOut(Schema):
     id: int
     username: str
-    email: EmailStr
-    bio: Optional[str]
-    avatar: Optional[str]
-    created_at: datetime
+    email: str  
+    bio: Optional[str] = None
+    avatar: Optional[str] = None
+    date_joined: datetime = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 class UserUpdate(Schema):
     bio: Optional[str] = None

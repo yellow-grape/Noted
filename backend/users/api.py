@@ -14,7 +14,7 @@ from core.schemas import (
 router = Router(tags=["auth"])
 User = get_user_model()
 
-@router.post("/register", response={201: UserOut, 400: Message})
+@router.post("/register", auth=None, response={201: UserOut, 400: Message})
 def register(request, payload: UserCreate) -> Any:
     """Register a new user."""
     try:
@@ -28,7 +28,7 @@ def register(request, payload: UserCreate) -> Any:
     except Exception as e:
         return 400, {"detail": str(e)}
 
-@router.post("/login", response={200: TokenSchema, 400: Message})
+@router.post("/login", auth=None, response={200: TokenSchema, 400: Message})
 def login(request, username: str, password: str) -> Any:
     """Login and get access token."""
     user = get_object_or_404(User, username=username)

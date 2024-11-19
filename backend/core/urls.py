@@ -21,12 +21,13 @@ from django.conf.urls.static import static
 from ninja import NinjaAPI
 from users.api import router as users_router
 from images.api import router as images_router
+from core.auth import AuthBearer
 
 api = NinjaAPI(
     title="Noted API",
     version="1.0.0",
     description="API for managing notes and images",
-    auth=None,
+    auth=AuthBearer(),
     csrf=False,
 )
 
