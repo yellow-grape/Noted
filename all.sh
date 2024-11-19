@@ -16,25 +16,13 @@ fi
 
 echo -e "${YELLOW}🚀 Processing all changes...${NC}"
 
-# Backend changes
-echo -e "${GREEN}📦 Processing backend changes...${NC}"
-cd backend
+# Add all changes
 git add .
-git commit -m "$commit_message"
-git push origin backend
 
-# Frontend changes
-echo -e "${GREEN}🎨 Processing frontend changes...${NC}"
-cd ../frontend
-git add .
+# Commit changes with the provided message
 git commit -m "$commit_message"
-git push origin frontend
 
-# Main project changes
-echo -e "${GREEN}📝 Processing main project changes...${NC}"
-cd ..
-git add .
-git commit -m "$commit_message"
+# Push to develop branch
 git push origin develop
 
 echo -e "${GREEN}✅ All changes have been pushed successfully!${NC}"
