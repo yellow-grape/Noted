@@ -16,7 +16,25 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
+from ninja import NinjaAPI
+from users.api import router as users_router
+from images.api import router as images_router
+
+api = NinjaAPI(
+    title="Noted API",
+    version="1.0.0",
+    description="API for managing notes and images",
+    auth=None,
+    csrf=False,
+)
+
+# Add routers
+api.add_router("/auth", users_router)
+api.add_router("/images", images_router)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-]
+    path("api/", api.urls),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
