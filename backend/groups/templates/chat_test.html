@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noted Chat Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .message-container {
+            height: calc(100vh - 300px);
+        }
+        .auth-hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8 text-center">Noted Chat Test</h1>
+
+        <!-- Authentication Forms -->
+        <div id="authForms" class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="flex gap-4 mb-4">
+                <div class="flex-1">
+                    <h2 class="text-xl font-semibold mb-4">Login</h2>
+                    <form id="loginForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Username</label>
+                            <input type="text" id="loginUsername" required
+                                class="mt-1 block w-full rounded border border-gray-300 px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" id="loginPassword" required
+                                class="mt-1 block w-full rounded border border-gray-300 px-3 py-2">
+                        </div>
+                        <button type="submit" 
+                            class="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Login
+                        </button>
+                    </form>
+                </div>
+                <div class="flex-1">
+                    <h2 class="text-xl font-semibold mb-4">Sign Up</h2>
+                    <form id="signupForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Username</label>
+                            <input type="text" id="signupUsername" required
+                                class="mt-1 block w-full rounded border border-gray-300 px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Email</label>
+                            <input type="email" id="signupEmail" required
+                                class="mt-1 block w-full rounded border border-gray-300 px-3 py-2">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Password</label>
+                            <input type="password" id="signupPassword" required
+                                class="mt-1 block w-full rounded border border-gray-300 px-3 py-2">
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                            Sign Up
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App (hidden until authenticated) -->
+        <div id="mainApp" class="auth-hidden">
+            <!-- Group Management -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold">Group Management</h2>
+                    <div class="flex items-center gap-4">
+                        <span id="connectionStatus" class="px-3 py-1 rounded text-sm">⚪ Not Connected</span>
+                        <button onclick="logout()" class="text-red-500 hover:text-red-700">Logout</button>
+                    </div>
+                </div>
+                <div class="flex gap-4 mb-4">
+                    <div class="flex-1">
+                        <form id="createGroupForm" class="flex gap-2">
+                            <input type="text" id="groupName" placeholder="Group Name" required
+                                class="flex-1 rounded border border-gray-300 px-3 py-2">
+                            <button type="submit" 
+                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                                Create Group
+                            </button>
+                        </form>
+                    </div>
+                    <div class="flex-1">
+                        <form id="joinGroupForm" class="flex gap-2">
+                            <input type="text" id="groupId" placeholder="Group ID" required
+                                class="flex-1 rounded border border-gray-300 px-3 py-2">
+                            <button type="submit"
+                                class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                                Join Group
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div id="groupList" class="space-y-2">
+                    <!-- Groups will be listed here -->
+                </div>
+            </div>
+
+            <!-- Chat Interface -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4">Chat</h2>
+                <div id="messages" class="message-container overflow-y-auto border border-gray-200 rounded p-4 mb-4">
+                    <!-- Messages will appear here -->
+                </div>
+
+                <form id="messageForm" class="flex gap-2">
+                    <select id="activeGroup" required class="rounded border border-gray-300 px-3 py-2">
+                        <option value="">Select Group</option>
+                    </select>
+                    <input type="text" id="messageInput" placeholder="Type your message..." required
+                        class="flex-1 rounded border border-gray-300 px-3 py-2">
+                    <button type="submit"
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        const WS_BASE = 'ws://localhost:8001';
+        let socket = null;
+        let activeGroupId = null;
+        let authToken = null;
+
+        // Check if user is already authenticated
+        const savedToken = localStorage.getItem('authToken');
+        if (savedToken) {
+            authToken = savedToken;
+            showMainApp();
+            loadGroups();
+        }
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Login failed');
+                }
+
+                const data = await response.json();
+                authToken = data.access_token;
+                localStorage.setItem('authToken', authToken);
+                
+                showMainApp();
+                loadGroups();
+            } catch (error) {
+                console.error('Login failed:', error);
+                alert('Login failed: ' + error.message);
+            }
+        });
+
+        // Signup form handler
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('signupUsername').value;
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+
+            try {
+                // Create the registration data
+                const userData = {
+                    username,
+                    email,
+                    password,
+                    bio: 'Test user'
+                };
+
+                // Create form data with the payload as a JSON string
+                const formData = new FormData();
+                formData.append('payload', JSON.stringify(userData));
+
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Registration failed');
+                }
+
+                // Auto login after successful registration
+                const loginResponse = await fetch(`${API_BASE}/auth/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!loginResponse.ok) {
+                    throw new Error('Auto-login failed');
+                }
+
+                const data = await loginResponse.json();
+                authToken = data.access_token;
+                localStorage.setItem('authToken', authToken);
+                
+                showMainApp();
+                loadGroups();
+            } catch (error) {
+                console.error('Registration failed:', error);
+                alert('Registration failed: ' + error.message);
+            }
+        });
+
+        // Logout function
+        function logout() {
+            authToken = null;
+            localStorage.removeItem('authToken');
+            if (socket) {
+                socket.close();
+            }
+            hideMainApp();
+            document.getElementById('connectionStatus').innerHTML = '⚪ Not Connected';
+        }
+
+        // Show/Hide main app
+        function showMainApp() {
+            document.getElementById('authForms').classList.add('auth-hidden');
+            document.getElementById('mainApp').classList.remove('auth-hidden');
+            document.getElementById('connectionStatus').innerHTML = '🟡 Connected';
+        }
+
+        function hideMainApp() {
+            document.getElementById('authForms').classList.remove('auth-hidden');
+            document.getElementById('mainApp').classList.add('auth-hidden');
+        }
+
+        // Load user's groups
+        async function loadGroups() {
+            try {
+                const response = await fetch(`${API_BASE}/groups/`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to load groups');
+                }
+                const groups = await response.json();
+                updateGroupList(groups);
+            } catch (error) {
+                console.error('Failed to load groups:', error);
+                if (error.message.includes('401')) {
+                    logout();
+                }
+            }
+        }
+
+        // Create a new group
+        document.getElementById('createGroupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('groupName').value;
+            try {
+                const response = await fetch(`${API_BASE}/groups/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ 
+                        name,
+                        goal: 'Test Group',
+                        description: 'A test group for chat functionality'
+                    })
+                });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to create group');
+                }
+                const group = await response.json();
+                document.getElementById('groupName').value = '';
+                loadGroups();
+            } catch (error) {
+                console.error('Failed to create group:', error);
+                alert('Failed to create group: ' + error.message);
+                if (error.message.includes('401')) {
+                    logout();
+                }
+            }
+        });
+
+        // Join a group
+        document.getElementById('joinGroupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const groupId = document.getElementById('groupId').value;
+            try {
+                const response = await fetch(`${API_BASE}/groups/${groupId}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to join group');
+                }
+                document.getElementById('groupId').value = '';
+                loadGroups();
+            } catch (error) {
+                console.error('Failed to join group:', error);
+                alert('Failed to join group: ' + error.message);
+                if (error.message.includes('401')) {
+                    logout();
+                }
+            }
+        });
+
+        // Update group list in UI
+        function updateGroupList(groups) {
+            const groupList = document.getElementById('groupList');
+            const activeGroup = document.getElementById('activeGroup');
+            
+            groupList.innerHTML = groups.map(group => `
+                <div class="flex items-center justify-between p-2 border rounded">
+                    <span>${group.name} (ID: ${group.id})</span>
+                    <button onclick="connectToGroup(${group.id})" class="text-blue-500 hover:text-blue-700">
+                        Connect
+                    </button>
+                </div>
+            `).join('');
+
+            activeGroup.innerHTML = `
+                <option value="">Select Group</option>
+                ${groups.map(group => `
+                    <option value="${group.id}">${group.name}</option>
+                `).join('')}
+            `;
+        }
+
+        // Connect to a group's WebSocket
+        async function connectToGroup(groupId) {
+            if (socket) {
+                socket.close();
+            }
+
+            try {
+                activeGroupId = groupId;
+                document.getElementById('activeGroup').value = groupId;
+                
+                socket = new WebSocket(`${WS_BASE}/chat/${groupId}/?token=${authToken}`);
+
+                socket.onopen = () => {
+                    document.getElementById('connectionStatus').innerHTML = '🟢 Connected to Chat';
+                    document.getElementById('messages').innerHTML = '';
+                };
+
+                socket.onclose = () => {
+                    document.getElementById('connectionStatus').innerHTML = '🟡 Connected';
+                };
+
+                socket.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    const messages = document.getElementById('messages');
+                    messages.innerHTML += `
+                        <div class="mb-2">
+                            <span class="font-semibold">${data.sender}:</span>
+                            <span>${data.message}</span>
+                        </div>
+                    `;
+                    messages.scrollTop = messages.scrollHeight;
+                };
+            } catch (error) {
+                console.error('Failed to connect to group:', error);
+            }
+        }
+
+        // Send message
+        document.getElementById('messageForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const messageInput = document.getElementById('messageInput');
+            const groupId = document.getElementById('activeGroup').value;
+            
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                alert('Please connect to a group first');
+                return;
+            }
+
+            socket.send(JSON.stringify({
+                message: messageInput.value
+            }));
+
+            messageInput.value = '';
+        });
+    </script>
+</body>
+</html>

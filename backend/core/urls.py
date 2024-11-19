@@ -21,7 +21,9 @@ from django.conf.urls.static import static
 from ninja import NinjaAPI
 from users.api import router as users_router
 from images.api import router as images_router
+from groups.api import router as groups_router
 from core.auth import AuthBearer
+from groups.views import ChatTestView
 
 api = NinjaAPI(
     title="Noted API",
@@ -32,10 +34,12 @@ api = NinjaAPI(
 )
 
 # Add routers
-api.add_router("/auth", users_router)
-api.add_router("/images", images_router)
+api.add_router("/auth/", users_router)
+api.add_router("/images/", images_router)
+api.add_router("/groups/", groups_router)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", api.urls),
+    path('test/chat/', ChatTestView.as_view(), name='chat_test'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,7 +1,8 @@
 from typing import Any
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
-from ninja import Router
+from ninja import Router, File, Form
+from ninja.files import UploadedFile
 from core.auth import AuthBearer, create_access_token, create_refresh_token
 from core.schemas import (
     TokenSchema,
@@ -15,14 +16,19 @@ router = Router(tags=["auth"])
 User = get_user_model()
 
 @router.post("/register", auth=None, response={201: UserOut, 400: Message})
-def register(request, payload: UserCreate) -> Any:
+def register(
+    request,
+    payload: UserCreate = Form(...),
+    avatar: UploadedFile = File(None)
+) -> Any:
     """Register a new user."""
     try:
         user = User.objects.create_user(
             username=payload.username,
             email=payload.email,
             password=payload.password,
-            bio=payload.bio
+            bio=payload.bio,
+            avatar=avatar
         )
         return 201, user
     except Exception as e:
@@ -37,7 +43,7 @@ def login(request, username: str, password: str) -> Any:
     
     return 200, {
         "access_token": create_access_token(user_id=user.id),
-        "refresh_token": create_refresh_token(user_id=user.id)
+        "token_type": "bearer"
     }
 
 @router.get("/me", response=UserOut, auth=AuthBearer())
@@ -46,12 +52,19 @@ def get_me(request) -> Any:
     return request.auth
 
 @router.put("/me", response=UserOut, auth=AuthBearer())
-def update_me(request, payload: UserUpdate) -> Any:
+def update_me(
+    request,
+    payload: UserUpdate,
+    avatar: UploadedFile = File(None)
+) -> Any:
     """Update current user info."""
     user = request.auth
     
-    for attr, value in payload.dict(exclude_unset=True).items():
-        setattr(user, attr, value)
+    if payload.bio is not None:
+        user.bio = payload.bio
+    
+    if avatar:
+        user.avatar = avatar
     
     user.save()
     return user
