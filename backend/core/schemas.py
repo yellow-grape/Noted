@@ -12,6 +12,10 @@ class TokenPayload(BaseModel):
     exp: int
     sub: str
 
+class LoginRequest(Schema):
+    username: str
+    password: str
+
 class UserCreate(Schema):
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=50)

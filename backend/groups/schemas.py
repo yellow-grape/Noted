@@ -7,6 +7,7 @@ class GroupBase(Schema):
     name: str
     goal: str
     description: str
+    public: bool = False
 
 class GroupCreate(GroupBase):
     pass
@@ -15,6 +16,7 @@ class GroupUpdate(Schema):
     name: Optional[str] = None
     goal: Optional[str] = None
     description: Optional[str] = None
+    public: Optional[bool] = None
 
 class MessageBase(Schema):
     content: str

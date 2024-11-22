@@ -1,0 +1,45 @@
+name: noted_app
+description: A new Flutter project
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  # State management
+  provider: ^6.0.5
+  # Networking
+  dio: ^5.3.3
+  web_socket_channel: ^2.4.0
+  # Storage
+  shared_preferences: ^2.2.2
+  # UI
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.1
+  # Utils
+  json_annotation: ^4.8.1
+  freezed_annotation: ^2.4.1
+  dotenv: ^4.2.0
+  flutter_dotenv: ^5.1.0
+  image_picker: ^1.1.2
+  intl: ^0.18.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+  freezed: ^2.4.6
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - .env

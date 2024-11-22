@@ -13,17 +13,24 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from django.core.asgi import get_asgi_application
-from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from groups.routing import websocket_urlpatterns
-from .middleware import JWTAuthMiddleware
+from channels.routing import ProtocolTypeRouter, URLRouter
+from channels.security.websocket import AllowedHostsOriginValidator
+from django.core.asgi import get_asgi_application
+from django.urls import re_path
+
+from chat.consumers import ChatConsumer
+from chat.middleware import JWTAuthMiddlewareStack
+
+websocket_urlpatterns = [
+    re_path(r'ws/chat/(?P<group_id>\d+)/$', ChatConsumer.as_asgi()),
+]
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    "websocket": JWTAuthMiddleware(
-        URLRouter(
-            websocket_urlpatterns
+    "websocket": AllowedHostsOriginValidator(
+        JWTAuthMiddlewareStack(
+            URLRouter(websocket_urlpatterns)
         )
     ),
 })

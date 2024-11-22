@@ -9,7 +9,8 @@ from core.schemas import (
     UserCreate,
     UserOut,
     UserUpdate,
-    Message
+    Message,
+    LoginRequest
 )
 
 router = Router(tags=["auth"])
@@ -23,6 +24,14 @@ def register(
 ) -> Any:
     """Register a new user."""
     try:
+        # Check if username already exists
+        if User.objects.filter(username=payload.username).exists():
+            return 400, {"detail": f"Username '{payload.username}' is already taken"}
+
+        # Check if email already exists
+        if User.objects.filter(email=payload.email).exists():
+            return 400, {"detail": f"Email '{payload.email}' is already registered"}
+
         user = User.objects.create_user(
             username=payload.username,
             email=payload.email,
@@ -34,17 +43,20 @@ def register(
     except Exception as e:
         return 400, {"detail": str(e)}
 
-@router.post("/login", auth=None, response={200: TokenSchema, 400: Message})
-def login(request, username: str, password: str) -> Any:
+@router.post("/login", auth=None, response={200: TokenSchema, 400: Message, 422: Message})
+def login(request, data: LoginRequest) -> Any:
     """Login and get access token."""
-    user = get_object_or_404(User, username=username)
-    if not user.check_password(password):
-        return 400, {"detail": "Invalid password"}
-    
-    return 200, {
-        "access_token": create_access_token(user_id=user.id),
-        "token_type": "bearer"
-    }
+    try:
+        user = get_object_or_404(User, username=data.username)
+        if not user.check_password(data.password):
+            return 400, {"detail": "Invalid password"}
+        
+        return 200, {
+            "access_token": create_access_token(user_id=user.id),
+            "token_type": "bearer"
+        }
+    except Exception as e:
+        return 422, {"detail": str(e)}
 
 @router.get("/me", response=UserOut, auth=AuthBearer())
 def get_me(request) -> Any:
